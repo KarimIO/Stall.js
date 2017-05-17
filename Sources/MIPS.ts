@@ -1820,6 +1820,22 @@ class MIPSCore //: Core
         {
             this.eBubble.aluOut = this.rfBubble.instruction.executor(this);
             this.eBubble.rd = this.rd;
+
+            // if (this.eBubble.instruction.format.name == "IB")
+            // {
+            //     var branched = (this.eBubble.aluOut == 1);
+                
+            //     if (branched != this.predictor.getPrediction())
+            //     {
+            //         this.isBubble.valid = false;
+            //         this.ifBubble.valid = false;
+            //         this.rfBubble.valid = false;
+            //         console.log("Branch failed, returning to @ " + this.eBubble.pc)
+            //         this.pc = this.eBubble.pc;                
+            //     }
+                
+            //     this.predictor.sendResult(branched);
+            // }
         }
         if (stall_E)
         {
@@ -1869,18 +1885,49 @@ class MIPSCore //: Core
                 {
                     rfBubble.rsData = this.df2Bubble.aluOut;
                 }
+
+                if (this.isBubble.instruction.format.name == "J")
+                {
+                    if (this.isBubble.instruction.mnemonic == "JUMP_PROCEDURE")
+                    {
+                        if (this.stackPointer >= 3)
+                        {
+                            return "Jump procedure stack overflow."
+                        }
+                        this.stackPointer += 1;
+                        this.stack[this.stackPointer] = this.isBubble.pc;
+                    }
+                    if (this.isBubble.instruction.mnemonic == "RETURN_PROCEDURE")
+                    {
+                        if (this.stackPointer < 0)
+                        {
+                            return "Return procedure stack underflow."
+                        }
+                        this.stackPointer -= 1;
+                    }
+                    this.pc = this.isBubble.arguments[0];
+                    
+                    console.log("Jumping to @ " + this.pc + ".");
+                }
+                
+                if (this.isBubble.instruction.format.name == "IB")
+                {
+                    if (this.predictor.getPrediction())
+                    {
+                        this.pc = this.isBubble.pc + this.isBubble.arguments[2];
+                        console.log("Branching to @ " + this.pc + ".");
+                    }
+                }
             }
+        
             this.rfBubble = rfBubble;
 
             //Fetch Bubbles
             this.isBubble = this.ifBubble;
-            this.ifBubble = { pc: this.pc, fetched: fetched.fetched, text: fetched.text, instruction: fetched.instruction, arguments: fetched.arguments, valid: true };
-
-
+            this.ifBubble = { pc: this.pc, fetched: fetched.fetched, text: fetched.text, instruction: fetched.instruction, arguments: fetched.arguments, valid: true }; 
         }
 
         this.cycleCounter += 1;
-
         return null;
     }
 
