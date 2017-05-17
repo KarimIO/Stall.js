@@ -61,7 +61,7 @@ function passPipeline(core: MIPSCore): void {
     var cycleParts:string[] = [];
     var instName = "";
     
-    if (core.ifBubble.valid) {
+    if (core.ifBubble.valid && core.ifBubble.instruction) {
         instName = core.ifBubble.instruction.mnemonic;
         if (instName != "NOP")
             cycleParts.push("IF");
