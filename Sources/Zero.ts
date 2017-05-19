@@ -61,21 +61,27 @@ function passPipeline(core: MIPSCore): void {
     var cycleParts:string[] = [];
     var instName = "";
     
-    if (core.ifBubble.valid && core.ifBubble.instruction) {
-        instName = core.ifBubble.instruction.mnemonic;
-        if (instName != "NOP")
-            cycleParts.push("IF");
-        else
-            instName = "";
+    /*if (core.stall) {
+        if (core.isBubble.valid)
+            cycleParts.push("STALL");
+        if (core.rfBubble.valid)
+            cycleParts.push("STALL");
+        if (core.eBubble.valid)
+            cycleParts.push("STALL");
     }
-    if (core.isBubble.valid)
-        cycleParts.push("IS");
-    if (core.rfBubble.valid)
-        cycleParts.push("RF");
-    if (core.eBubble.stall)
-        cycleParts.push("STALL");
-    else if (core.eBubble.valid)
-        cycleParts.push("EX");
+    else {*/
+        if (core.ifBubble.valid) {
+            cycleParts.push("IF");
+            if (core.ifBubble.instruction)
+                instName = core.ifBubble.instruction.mnemonic;
+        }
+        if (core.isBubble.valid)
+            cycleParts.push("IS");
+        if (core.rfBubble.valid)
+            cycleParts.push("RF");
+        if (core.eBubble.valid)
+            cycleParts.push("EX");
+    //}
     if (core.df1Bubble.valid)
         cycleParts.push("DF");
     if (core.df2Bubble.valid)
