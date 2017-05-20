@@ -247,7 +247,6 @@ function Oak_gen_MIPS(): InstructionSet
             function(core)
             {
                 core.rd = core.rfBubble.arguments[0];
-                console.log("EX ADDI ", core.rfBubble.arguments[0], core.rfBubble.rsData, core.rfBubble.arguments[2]);
                 return core.rfBubble.rsData + core.rfBubble.arguments[2];
             },
             function(core)
@@ -256,7 +255,6 @@ function Oak_gen_MIPS(): InstructionSet
             },
             function(core)
             {
-                console.log("WB ADDI ", core.tcBubble.arguments[0], core.tcBubble.aluOut);
                 core.registerFile.write(core.tcBubble.arguments[0], core.tcBubble.aluOut);
                 return 0;
             }
@@ -472,7 +470,7 @@ function Oak_gen_MIPS(): InstructionSet
             [0x23],
             function(core)
             {
-                core.rd = core.rfBubble.arguments[0];
+                core.rd = null;
                 return core.rfBubble.rsData + core.rfBubble.arguments[1];
             },
             function(core)
@@ -480,7 +478,6 @@ function Oak_gen_MIPS(): InstructionSet
                 var bytes = core.memcpy(core.df1Bubble.aluOut, 4)
                 if (bytes == null)
                 {
-                    alert("Loaded 4 null bytes");
                     return -1;
                 }
                 core.df2Bubble.readData = catBytes(bytes);
@@ -489,8 +486,7 @@ function Oak_gen_MIPS(): InstructionSet
             },
             function(core)
             {
-                console.log("LW WB: ", core.tcBubble.arguments[0], " => ", core.tcBubble.readData, " at ", core.tcBubble.aluOut);
-                core.registerFile.write(core.tcBubble.arguments[0], core.tcBubble.readData);
+                core.registerFile.write(arguments[0], core.tcBubble.readData);
                 return 0;
             }
         )
@@ -506,14 +502,14 @@ function Oak_gen_MIPS(): InstructionSet
             [0x2B],
             function(core)
             {
-                core.rd = core.rfBubble.arguments[0];
+                core.rd = arguments[0];
                 return core.rfBubble.rsData + core.rfBubble.arguments[1];
             },
             function(core)
             {
                 var bytes = [];
-                var value = core.df1Bubble.rtData;
-                console.log("rtData @ sw " + core.df1Bubble.aluOut + ": " + value);
+                var value = core.eBubble.rtData;
+                console.log("rtData @ sw " + value);
                 bytes.push(value & 255);
                 value = value >>> 8;
                 bytes.push(value & 255);
@@ -1706,216 +1702,236 @@ class MIPSCore //: Core
         readData: null
     };
 
-    wbBubble =
-    {
-        instruction: null
-    };
-
-    writeBackValid: boolean;    
-
-    passIFIS(): void {
-        this.isBubble.arguments = this.ifBubble.arguments;
-        this.isBubble.fetched = this.ifBubble.fetched;
-        this.isBubble.instruction = this.ifBubble.instruction;
-        this.isBubble.pc = this.ifBubble.pc;
-        this.isBubble.text = this.ifBubble.text;
-        this.isBubble.valid = this.ifBubble.valid;
-    }
-    
-    passISRF(): void {
-        this.rfBubble.arguments = this.isBubble.arguments;
-        this.rfBubble.fetched = this.isBubble.fetched;
-        this.rfBubble.instruction = this.isBubble.instruction;
-        this.rfBubble.pc = this.isBubble.pc;
-        this.rfBubble.text = this.isBubble.text;
-        this.rfBubble.valid = this.isBubble.valid;
-
-        var rt = this.isBubble.fetched >> 16 & 31;
-        var rs = this.isBubble.fetched >> 21 & 31;
-
-        this.rfBubble.rsData = this.registerFile.read(rs);
-        this.rfBubble.rtData = this.registerFile.read(rt);
-    }
-    
-    passRFEX(): void {
-        this.eBubble.arguments = this.rfBubble.arguments;
-        this.eBubble.fetched = this.rfBubble.fetched;
-        this.eBubble.instruction = this.rfBubble.instruction;
-        this.eBubble.pc = this.rfBubble.pc;
-        this.eBubble.text = this.rfBubble.text;
-        this.eBubble.valid = this.rfBubble.valid;
-
-        if (this.eBubble.valid) {
-            this.eBubble.aluOut = this.rfBubble.instruction.executor(this);
-            this.eBubble.rd = this.rd;
-        }
-
-        this.eBubble.rsData = this.rfBubble.rsData;
-        this.eBubble.rtData = this.rfBubble.rtData;
-    }
-    
-    passEXDF(): void {
-        this.df1Bubble.arguments = this.eBubble.arguments;
-        this.df1Bubble.fetched = this.eBubble.fetched;
-        this.df1Bubble.instruction = this.eBubble.instruction;
-        this.df1Bubble.pc = this.eBubble.pc;
-        this.df1Bubble.text = this.eBubble.text;
-        this.df1Bubble.valid = this.eBubble.valid;
-
-        this.df1Bubble.rsData = this.eBubble.rsData;
-        this.df1Bubble.rtData = this.eBubble.rtData;
-
-        this.df1Bubble.aluOut = this.eBubble.aluOut;
-        this.df1Bubble.rd = this.eBubble.rd;
-    }
-    
-    passDFDS(): void {
-        this.df2Bubble.arguments = this.df1Bubble.arguments;
-        this.df2Bubble.fetched = this.df1Bubble.fetched;
-        this.df2Bubble.instruction = this.df1Bubble.instruction;
-        this.df2Bubble.pc = this.df1Bubble.pc;
-        this.df2Bubble.text = this.df1Bubble.text;
-        this.df2Bubble.valid = this.df1Bubble.valid;
-
-        this.df2Bubble.rsData = this.df1Bubble.rsData;
-        this.df2Bubble.rtData = this.df1Bubble.rtData;
-        
-        this.df2Bubble.aluOut = this.df1Bubble.aluOut;
-        this.df2Bubble.rd = this.df1Bubble.rd;
-    }
-    
-    passDSTC(): void {
-        this.tcBubble.arguments = this.df2Bubble.arguments;
-        this.tcBubble.fetched = this.df2Bubble.fetched;
-        this.tcBubble.instruction = this.df2Bubble.instruction;
-        this.tcBubble.pc = this.df2Bubble.pc;
-        this.tcBubble.text = this.df2Bubble.text;
-        this.tcBubble.valid = this.df2Bubble.valid;
-
-        this.tcBubble.rsData = this.df2Bubble.rsData;
-        this.tcBubble.rtData = this.df2Bubble.rtData;
-
-        this.tcBubble.aluOut = this.df2Bubble.aluOut;
-        this.tcBubble.rd = this.df2Bubble.rd;
-    }
-    
-    passTCWB(): void {
-        this.wbBubble.instruction = this.tcBubble.instruction;
-    }
-
-    parseFetched(fetchOut: any) {
-        if (fetchOut.instruction)
-            this.ifBubble.valid = fetchOut.instruction.mnemonic != "NOP";
-        
-        this.ifBubble.arguments = fetchOut.arguments;
-        this.ifBubble.fetched = fetchOut.fetched;
-        this.ifBubble.instruction = fetchOut.instruction;
-        this.ifBubble.text = fetchOut.text;
-        this.ifBubble.pc = this.pc;
-    }
-
-    forward:boolean = false;
-    stall:boolean = false;
-    
-    forwardUnit() {
-        var rt = this.rfBubble.fetched >> 16 & 31;
-        var rs = this.rfBubble.fetched >> 21 & 31;
-        if (rt == this.eBubble.rd && this.eBubble.valid) {
-            this.rfBubble.rtData = this.eBubble.aluOut;
-        }
-        else if (rt == this.df1Bubble.rd && this.df1Bubble.valid) {
-            this.rfBubble.rtData = this.df1Bubble.aluOut;
-        }
-        else if (rt == this.df2Bubble.rd && this.df2Bubble.valid) {
-            this.rfBubble.rtData = this.df2Bubble.aluOut;
-        }
-
-        console.log(this.rfBubble.rtData);
-
-        if (rs == this.eBubble.rd && this.eBubble.valid)
-        {
-            this.rfBubble.rsData = this.eBubble.aluOut;
-        }
-        else if (rs == this.df1Bubble.rd && this.df1Bubble.valid)
-        {
-            this.rfBubble.rsData = this.df1Bubble.aluOut;
-        }
-        else if (rs == this.df2Bubble.rd && this.df2Bubble.valid)
-        {
-            this.rfBubble.rsData = this.df2Bubble.aluOut;
-        }
-
-        console.log(this.rfBubble.rtData);
-    }
-
-    stallUnit() {
-        this.stall = false;
-
-        if (this.rfBubble.valid) {
-            var rt_D = this.rfBubble.fetched >> 16 & 31;
-            var rs_D = this.rfBubble.fetched >> 21 & 31;
-            //At end of execution stall_E
-            if (this.eBubble.valid) {                 
-                var rt_E = this.eBubble.fetched >> 16 & 31;
-                var rs_E = this.eBubble.fetched >> 21 & 31;
-                this.stall = this.stall || (((rt_D == rt_E) || (rs_D == rt_E)) && this.eBubble.instruction.mnemonic == "LW");
-            }
-            if (this.df1Bubble.valid) {
-                var rt_E = this.df1Bubble.fetched >> 16 & 31;
-                var rs_E = this.df1Bubble.fetched >> 21 & 31;
-                this.stall = this.stall || (((rt_D == rt_E) || (rs_D == rt_E)) && this.df1Bubble.instruction.mnemonic == "LW");
-            }
-            if (this.df2Bubble.valid) {
-                var rt_E = this.df2Bubble.fetched >> 16 & 31;
-                var rs_E = this.df2Bubble.fetched >> 21 & 31;
-                this.stall = this.stall || (((rt_D == rt_E) || (rs_D == rt_E)) && this.df2Bubble.instruction.mnemonic == "LW");
-            }
-        }
-    }
+    writeBackValid: boolean;
 
     //Equivalent to one clock cycle.
     cycle(): string
     {
-        var fetchOut = this.fetchAndDecode();
-        console.log(this.pc, fetchOut);
+        var fetched = this.fetchAndDecode();
+        if (fetched.error != null)
+        {
+            return fetched.error;
+        }   
 
-        this.stallUnit();
+        //Stalls affect WRITING.
+        var stall_E = false;
+        if (this.rfBubble.valid)
+        {
+            var rt_D = this.rfBubble.fetched >> 16 & 31;
+            var rs_D = this.rfBubble.fetched >> 21 & 31;
+            //At end of execution stall_E
+            if (this.eBubble.valid)
+            {                 
+                var rt_E = this.eBubble.fetched >> 16 & 31;
+                var rs_E = this.eBubble.fetched >> 21 & 31;
+                stall_E = stall_E || (((rt_D == rt_E) || (rs_D == rt_E)) && this.eBubble.instruction.mnemonic == "LW");
+            }
+            if (this.df1Bubble.valid)
+            {
+                var rt_E = this.df1Bubble.fetched >> 16 & 31;
+                var rs_E = this.df1Bubble.fetched >> 21 & 31;
+                stall_E = stall_E || (((rt_D == rt_E) || (rs_D == rt_E)) && this.df1Bubble.instruction.mnemonic == "LW");
+            }
+            if (this.df2Bubble.valid)
+            {
+                var rt_E = this.df2Bubble.fetched >> 16 & 31;
+                var rs_E = this.df2Bubble.fetched >> 21 & 31;
+                stall_E = stall_E || (((rt_D == rt_E) || (rs_D == rt_E)) && this.df2Bubble.instruction.mnemonic == "LW");
+            }
+        }
 
-        // Do writeback early because it uses tcBubble.
-        if (this.tcBubble.instruction)
-            this.tcBubble.instruction.writeBack(this);
 
-        // Pass Data
-        this.writeBackValid = this.tcBubble.valid;
-        this.passDSTC();
-        this.passDFDS();
-        if (this.df2Bubble.instruction)
-            this.df2Bubble.instruction.memory(this);
 
-        //if (!this.stall) {
-            this.passEXDF();
-            this.passRFEX();
-            this.forwardUnit();
-            this.passISRF();
-            this.passIFIS();
-        /*}
-        else {
-            this.ifBubble.valid = false;
-        }*/
+        //Memory Bubbles
+        this.writeBackValid = this.tcBubble.valid; 
+        this.tcBubble.pc = this.df2Bubble.pc;
+        this.tcBubble.fetched = this.df2Bubble.fetched;
+        this.tcBubble.text = this.df2Bubble.text;
+        this.tcBubble.instruction = this.df2Bubble.instruction;
+        this.tcBubble.arguments = this.df2Bubble.arguments;
+        this.tcBubble.valid = this.df2Bubble.valid;
+        this.tcBubble.rsData = this.df2Bubble.rsData;
+        this.tcBubble.rtData = this.df2Bubble.rtData;
+        this.tcBubble.aluOut = this.df2Bubble.aluOut;
+        this.tcBubble.rd = this.df2Bubble.rd;
+        this.tcBubble.readData = this.df2Bubble.readData;
 
-        // Move Fetched
-        this.parseFetched(fetchOut);
+        if (this.tcBubble.valid)
+        {
+            try
+            {
+                this.tcBubble.instruction.writeBack(this);
+            }
+            catch (e)
+            {
+                return e;
+            }
+        }    
 
-        var bubbles = [this.ifBubble, this.isBubble, this.rfBubble, this.eBubble, this.df1Bubble, this.df2Bubble, this.tcBubble];
-        console.log(bubbles);
+        
+        this.df2Bubble.pc = this.df1Bubble.pc;
+        this.df2Bubble.fetched = this.df1Bubble.fetched;
+        this.df2Bubble.text = this.df1Bubble.text;
+        this.df2Bubble.instruction = this.df1Bubble.instruction;
+        this.df2Bubble.arguments = this.df1Bubble.arguments;
+        this.df2Bubble.valid = this.df1Bubble.valid;
+        this.df2Bubble.rsData = this.df1Bubble.rsData;
+        this.df2Bubble.rtData = this.df1Bubble.rtData;
+        this.df2Bubble.aluOut = this.df1Bubble.aluOut;
+        this.df2Bubble.rd = this.df1Bubble.rd;
+        this.df2Bubble.readData = this.df1Bubble.readData;
+        var memoryInUse = null
+        if (this.df2Bubble.valid)
+        {
+            memoryInUse = this.df2Bubble.instruction.memory(this);
+            if (memoryInUse == -1)
+            {
+                return "Illegal access.";
+            }
+        }
 
-        //if (!this.stall) {
-            this.pcNext = this.pc += 4;
+        if (this.eBubble.instruction != null && this.eBubble.instruction.mnemonic == "LW")
+        {
+            console.log("LW at " + (this.cycleCounter + 1));
+        }
+
+        this.df1Bubble.pc = this.eBubble.pc;
+        this.df1Bubble.fetched = this.eBubble.fetched;
+        this.df1Bubble.text = this.eBubble.text;
+        this.df1Bubble.instruction = this.eBubble.instruction;
+        this.df1Bubble.arguments = this.eBubble.arguments;
+        this.df1Bubble.valid = this.eBubble.valid;
+        this.df1Bubble.rsData = this.eBubble.rsData;
+        this.df1Bubble.rtData = this.eBubble.rtData;
+        this.df1Bubble.aluOut = this.eBubble.aluOut;
+        this.df1Bubble.rd = this.eBubble.rd;
+
+        //Execution Bubble          
+        this.eBubble.pc = this.rfBubble.pc;
+        this.eBubble.fetched = this.rfBubble.fetched;
+        this.eBubble.text = this.rfBubble.text;
+        this.eBubble.instruction = this.rfBubble.instruction;
+        this.eBubble.arguments = this.rfBubble.arguments;
+        this.eBubble.valid = this.rfBubble.valid;
+        this.eBubble.rsData = this.rfBubble.rsData;
+        this.eBubble.rtData = this.rfBubble.rtData;
+        this.eBubble.stall = stall_E;
+        if (this.eBubble.valid)
+        {
+            this.eBubble.aluOut = this.rfBubble.instruction.executor(this);
+            this.eBubble.rd = this.rd;
+
+            // if (this.eBubble.instruction.format.name == "IB")
+            // {
+            //     var branched = (this.eBubble.aluOut == 1);
+                
+            //     if (branched != this.predictor.getPrediction())
+            //     {
+            //         this.isBubble.valid = false;
+            //         this.ifBubble.valid = false;
+            //         this.rfBubble.valid = false;
+            //         console.log("Branch failed, returning to @ " + this.eBubble.pc)
+            //         this.pc = this.eBubble.pc;                
+            //     }
+                
+            //     this.predictor.sendResult(branched);
+            // }
+        }
+        if (stall_E)
+        {
+            this.eBubble.valid = false;
+            console.log("Stalled Execution.");
+        }
+        //Register File Bubble
+        if (!stall_E)
+        {
             this.pc = this.pcNext;
-        //}
+            
+            var rfBubble: any = this.isBubble;
+            if (rfBubble.valid)
+            {
+                var rt = this.isBubble.fetched >> 16 & 31;
+                var rs = this.isBubble.fetched >> 21 & 31;
+                rfBubble.rtData = this.registerFile.read(rt);
+
+                console.log(rfBubble.rtData);
+                rfBubble.rsData = this.registerFile.read(rs);
+
+                //Forwarding
+                if (rt == this.eBubble.rd && this.eBubble.valid)
+                {
+                    rfBubble.rtData = this.eBubble.aluOut;
+                }
+                else if (rt == this.df1Bubble.rd && this.df1Bubble.valid)
+                {
+                    rfBubble.rtData = this.df1Bubble.aluOut;
+                }
+                else if (rt == this.df2Bubble.rd && this.df2Bubble.valid)
+                {
+                    rfBubble.rtData = this.df2Bubble.aluOut;
+                }
+
+                console.log(rfBubble.rtData);
+
+                if (rs == this.eBubble.rd && this.eBubble.valid)
+                {
+                    rfBubble.rsData = this.eBubble.aluOut;
+                }
+                else if (rs == this.df1Bubble.rd && this.df1Bubble.valid)
+                {
+                    rfBubble.rsData = this.df1Bubble.aluOut;
+                }
+                else if (rs == this.df2Bubble.rd && this.df2Bubble.valid)
+                {
+                    rfBubble.rsData = this.df2Bubble.aluOut;
+                }
+
+                if (this.isBubble.instruction.format.name == "J")
+                {
+                    if (this.isBubble.instruction.mnemonic == "JUMP_PROCEDURE")
+                    {
+                        if (this.stackPointer >= 3)
+                        {
+                            return "Jump procedure stack overflow."
+                        }
+                        this.stackPointer += 1;
+                        this.stack[this.stackPointer] = this.isBubble.pc;
+                    }
+                    if (this.isBubble.instruction.mnemonic == "RETURN_PROCEDURE")
+                    {
+                        if (this.stackPointer < 0)
+                        {
+                            return "Return procedure stack underflow."
+                        }
+                        this.stackPointer -= 1;
+                    }
+                    this.pc = this.isBubble.arguments[0];
+                    
+                    console.log("Jumping to @ " + this.pc + ".");
+                }
+                
+                if (this.isBubble.instruction.format.name == "IB")
+                {
+                    if (this.predictor.getPrediction())
+                    {
+                        this.pc = this.isBubble.pc + this.isBubble.arguments[2];
+                        console.log("Branching to @ " + this.pc + ".");
+                    }
+                }
+            }
+        
+            this.rfBubble = rfBubble;
+
+            //Fetch Bubbles
+            this.isBubble = this.ifBubble;
+            this.ifBubble = { pc: this.pc, fetched: fetched.fetched, text: fetched.text, instruction: fetched.instruction, arguments: fetched.arguments, valid: true }; 
+        }
+
         this.cycleCounter += 1;
         return null;
     }
+
+
     
     reset()
     {
