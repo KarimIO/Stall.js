@@ -1732,9 +1732,6 @@ class MIPSCore //: Core
 
         var rt = this.isBubble.fetched >> 16 & 31;
         var rs = this.isBubble.fetched >> 21 & 31;
-
-        this.rfBubble.rsData = this.registerFile.read(rs);
-        this.rfBubble.rtData = this.registerFile.read(rt);
     }
     
     passRFEX(): void {
@@ -1814,12 +1811,14 @@ class MIPSCore //: Core
         this.ifBubble.pc = this.pc;
     }
 
-    forward:boolean = false;
     stall:boolean = false;
     
     forwardUnit() {
         var rt = this.rfBubble.fetched >> 16 & 31;
         var rs = this.rfBubble.fetched >> 21 & 31;
+        this.rfBubble.rsData = this.registerFile.read(rs);
+        this.rfBubble.rtData = this.registerFile.read(rt);
+        
         if (rt == this.eBubble.rd && this.eBubble.valid) {
             this.rfBubble.rtData = this.eBubble.aluOut;
         }
@@ -1829,8 +1828,6 @@ class MIPSCore //: Core
         else if (rt == this.df2Bubble.rd && this.df2Bubble.valid) {
             this.rfBubble.rtData = this.df2Bubble.aluOut;
         }
-
-        console.log(this.rfBubble.rtData);
 
         if (rs == this.eBubble.rd && this.eBubble.valid)
         {
@@ -1845,7 +1842,7 @@ class MIPSCore //: Core
             this.rfBubble.rsData = this.df2Bubble.aluOut;
         }
 
-        console.log(this.rfBubble.rtData);
+        console.log("Forward RT:", this.rfBubble.rtData, " RS: ", this.rfBubble.rsData);
     }
 
     stallUnit() {
@@ -1888,14 +1885,14 @@ class MIPSCore //: Core
         // Pass Data
         this.writeBackValid = this.tcBubble.valid;
         this.passDSTC();
-        this.passDFDS();
         if (this.df2Bubble.instruction)
             this.df2Bubble.instruction.memory(this);
+        this.passDFDS();
 
         //if (!this.stall) {
             this.passEXDF();
-            this.passRFEX();
             this.forwardUnit();
+            this.passRFEX();
             this.passISRF();
             this.passIFIS();
         /*}
