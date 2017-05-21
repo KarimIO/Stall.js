@@ -1873,10 +1873,9 @@ class MIPSCore //: Core
 
         this.passEXDF();
         this.forwardUnit();
-        this.passRFEX();
-
-        if (this.eBubble.valid && this.rfBubble.instruction)
+        if (this.rfBubble.valid && this.rfBubble.instruction)
             this.eBubble.aluOut = this.rfBubble.instruction.executor(this);
+        this.passRFEX();
 
         this.passISRF();
         this.passIFIS();
