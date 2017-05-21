@@ -1706,11 +1706,6 @@ class MIPSCore //: Core
         readData: null
     };
 
-    wbBubble =
-    {
-        instruction: null
-    };
-
     writeBackValid: boolean;    
 
     passIFIS(): void {
@@ -1776,6 +1771,7 @@ class MIPSCore //: Core
 
         this.df2Bubble.rsData = this.df1Bubble.rsData;
         this.df2Bubble.rtData = this.df1Bubble.rtData;
+        this.df2Bubble.readData = this.df1Bubble.readData;
         
         this.df2Bubble.aluOut = this.df1Bubble.aluOut;
         this.df2Bubble.rd = this.df1Bubble.rd;
@@ -1791,13 +1787,10 @@ class MIPSCore //: Core
 
         this.tcBubble.rsData = this.df2Bubble.rsData;
         this.tcBubble.rtData = this.df2Bubble.rtData;
+        this.tcBubble.readData = this.df2Bubble.readData;
 
         this.tcBubble.aluOut = this.df2Bubble.aluOut;
         this.tcBubble.rd = this.df2Bubble.rd;
-    }
-    
-    passTCWB(): void {
-        this.wbBubble.instruction = this.tcBubble.instruction;
     }
 
     parseFetched(fetchOut: any) {
