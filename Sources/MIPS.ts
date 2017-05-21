@@ -1885,9 +1885,9 @@ class MIPSCore //: Core
         // Pass Data
         this.writeBackValid = this.tcBubble.valid;
         this.passDSTC();
+        this.passDFDS();
         if (this.df2Bubble.instruction)
             this.df2Bubble.instruction.memory(this);
-        this.passDFDS();
 
         //if (!this.stall) {
             this.passEXDF();
