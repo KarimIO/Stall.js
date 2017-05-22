@@ -698,22 +698,9 @@ function clearPipeline() {
 (function() {
     "use strict";
 
-    /*addCycle("ADD", 1, ["IF"]);
-    addCycle("MULT",2, ["IF", "IS"]);
-    addCycle("BLT", 3, ["IF", "IS", "RF"]);
-    addCycle("", 3, ["IS", "RF", "EX"]);
-    addCycle("BLT", 4, ["IF", "RF", "EX", "DF"]);
-    addCycle("", 4, ["IS", "STALL", "STALL", "DS"]);
-    addCycle("", 4, ["RF", "EX", "DF", "TC"]);
-    addCycle("", 4, ["EX", "DF", "DS", "WB"]);
-    addCycle("", 4, ["DF", "DS", "TC"]);
-    addCycle("", 4, ["DS", "TC", "WB"]);
-    addCycle("", 4, ["TC", "WB"]);
-    addCycle("", 4, ["WB"]);*/
-
     var defaultTab = "<div class='selected'><span></span><div></div></div>";
-    var defaultCode = "addi $a0, $zero, 6\nsw $a0, -4($sp)\nlw $a0, -4($sp)\nadd $a1, $a0, $a0\naddi $a2, $a1, 9\nj end\nxor $a2, $a2, $a2\nend: syscall";
-
+    var defaultCode = "addi $a0, $zero, 6\nsw $a0, -4($sp)\nlw $a0, -4($sp)\nadd $a1, $a0, $a0\naddi $a2, $a1, 9\njpr skip\nj end\nxor $a2, $a2, $a2\nskip: rpr\nend: syscall";
+    
     function setRegisterNames() {
         var regNames = tabs[currentTab].core.instructionSet.abiNames;
         //alert(tabs[currentTab].core.instructionSet.abiNames);

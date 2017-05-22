@@ -133,7 +133,7 @@ function simulateStep(core: MIPSCore): string
         return cycle;
     }
 
-    core.instructionCallback("End of Cycle " + core.cycleCounter);
+    core.instructionCallback("Cycle " + core.cycleCounter + ": Fetched " + core.ifBubble.text + ".");
 
     passPipeline(core);
 

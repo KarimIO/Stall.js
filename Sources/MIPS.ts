@@ -1,5 +1,5 @@
-/// <reference path="InstructionSet.ts"/>
-/// <reference path="Utils.ts" />
+///<reference path="InstructionSet.ts"/>
+///<reference path="Utils.ts" />
 //The MIPS Instruction Set Architecture
 
 function Oak_gen_MIPS(): InstructionSet
@@ -212,6 +212,23 @@ function Oak_gen_MIPS(): InstructionSet
             }
         )
     );
+
+
+    instructions.push(new Instruction(
+        "RPR",
+        rcSubtype,
+        ["funct"],
+        [0b100100],
+        function(core) {
+            return null;
+        },
+        function(core) {
+            return null;
+        },
+        function(core) {
+            return null;
+        }
+    ));
 
     //I-Type
     formats.push
@@ -666,26 +683,10 @@ function Oak_gen_MIPS(): InstructionSet
     ));
 
     instructions.push(new Instruction(
-        "JUMPPROCEDURE",
+        "JPR",
         jType,
         ["opcode"],
-        [0x63],
-        function(core) {
-            return null;
-        },
-        function(core) {
-            return null;
-        },
-        function(core) {
-            return null;
-        }
-    ));
-
-    instructions.push(new Instruction(
-        "RETURNPROCEDURE",
-        jType,
-        ["opcode"],
-        [0x64],
+        [0b100000],
         function(core) {
             return null;
         },
@@ -1410,7 +1411,7 @@ class BranchPredictor
 
     constructor()
     {
-        this.state = 0 >>> 0;
+        this.state = 0b00 >>> 0;
     }
 }
 
@@ -1616,7 +1617,8 @@ class MIPSCore //: Core
         arguments: null,
         valid: false,
         rsData: null,
-        rtData: null
+        rtData: null,
+        prediction: false
     };
 
     eBubble =
@@ -1832,26 +1834,25 @@ class MIPSCore //: Core
     //Equivalent to one clock cycle.
     cycle(): string
     {
-        var fetchOut = this.fetchAndDecode();
 
-        // Jump Behavior
-        if (this.isBubble.valid && this.isBubble.instruction.format.name == "J")
+        //Jump Behavior
+        if (this.isBubble.valid && (this.isBubble.instruction.format.name == "J" || this.isBubble.instruction.mnemonic == "RPR"))
         {
             this.pc = this.isBubble.arguments[0];
-            if (this.isBubble.instruction.mnemonic == "JUMP_PROCEDURE")
+            if (this.isBubble.instruction.mnemonic == "JPR")
             {
                 if (this.stackPointer >= 3)
                 {
-                    return "Jump procedure stack overflow."
+                    return "Jump procedure stack overflow.";
                 }
                 this.stackPointer += 1;
-                this.stack[this.stackPointer] = this.isBubble.pc;
+                this.stack[this.stackPointer] = this.isBubble.pc + 4;
             }
-            else if (this.isBubble.instruction.mnemonic == "RETURN_PROCEDURE")
+            else if (this.isBubble.instruction.mnemonic == "RPR")
             {
                 if (this.stackPointer < 0)
                 {
-                    return "Return procedure stack underflow."
+                    return "Return procedure stack underflow.";
                 }
                 this.pc = this.stack[this.stackPointer];
                 this.stackPointer -= 1;
@@ -1859,11 +1860,12 @@ class MIPSCore //: Core
             this.ifBubble.valid = false;
         }
 
-        // Do writeback early because it uses tcBubble.
+        
+        //Do writeback early because it uses tcBubble.
         if (this.tcBubble.valid && this.tcBubble.instruction)
             this.tcBubble.instruction.writeBack(this);
 
-        // Pass Data
+        //Pass Data
         this.writeBackValid = this.tcBubble.valid;    
         this.writeBackNull  = (this.tcBubble.instruction == null);
 
@@ -1876,13 +1878,54 @@ class MIPSCore //: Core
         this.forwardUnit();
         if (this.rfBubble.valid && this.rfBubble.instruction)
             this.eBubble.aluOut = this.rfBubble.instruction.executor(this);
+
+        //Branching
+        if (this.rfBubble.valid && this.rfBubble.instruction)
+        {
+            if (this.rfBubble.instruction.format.name == "IB")
+            {
+                var branching = (this.eBubble.aluOut == 1);
+                if (branching != this.rfBubble.prediction) //Penalty.
+                {
+                    if (branching)
+                    {
+                        this.pc = this.rfBubble.pc + this.rfBubble.arguments[2] + 4;
+                        this.ifBubble.valid = false;
+                        this.isBubble.valid = false;
+                    }
+                    else
+                    {
+                        this.pc = this.rfBubble.pc + 4;
+                        this.ifBubble.valid = false;
+                        this.isBubble.valid = false;
+                    }
+                    alert("Unbranched to " + this.pc)
+                }
+                this.predictor.sendResult(branching);
+            }
+        }
+
         this.passRFEX();
+
+
+        //Prediction
+        if (this.isBubble.valid && this.isBubble.instruction.format.name == "IB")
+        {
+            var prediction = this.predictor.getPrediction();
+            if (prediction)
+            {
+                this.pc = this.isBubble.pc + this.isBubble.arguments[2] + 4;
+            }
+            this.rfBubble.prediction = prediction;
+            alert("Predicted " + prediction);
+        }
 
         this.passISRF();
         this.passIFIS();
         
 
-        // Move Fetched
+        //Move Fetched
+        var fetchOut = this.fetchAndDecode();
         this.parseFetched(fetchOut);
 
         this.stallUnit();
@@ -1941,6 +1984,7 @@ class MIPSCore //: Core
             instruction: null,
             arguments: null,
             valid: false,
+            prediction: false,
             rsData: null,
             rtData: null
         };
