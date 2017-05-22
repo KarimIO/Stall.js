@@ -58,32 +58,63 @@ function loadMemStep(core: MIPSCore, data: number[]): string
 }
 
 function passPipeline(core: MIPSCore): void {
+    
     var cycleParts:string[] = [];
     var instName = "";
     
-    if (core.ifBubble.valid) {
-        instName = core.ifBubble.instruction.mnemonic;
-        if (instName != "NOP")
-            cycleParts.push("IF");
-        else
-            instName = "";
+    if (core.ifBubble && core.ifBubble.valid) {
+        cycleParts.push("IF");
+        if (core.ifBubble.instruction)
+            instName = core.ifBubble.instruction.mnemonic;
     }
-    if (core.isBubble.valid)
-        cycleParts.push("IS");
-    if (core.rfBubble.valid)
-        cycleParts.push("RF");
-    if (core.eBubble.stall)
-        cycleParts.push("STALL");
-    else if (core.eBubble.valid)
-        cycleParts.push("EX");
-    if (core.df1Bubble.valid)
-        cycleParts.push("DF");
-    if (core.df2Bubble.valid)
-        cycleParts.push("DS");
-    if (core.tcBubble.valid)
-        cycleParts.push("TC");
-    if (core.writeBackValid)
-        cycleParts.push("WB");
+    if (core.isBubble.fetched != 0 && core.isBubble.instruction) {
+        if (core.isBubble.valid)
+            cycleParts.push("IS");
+        else
+            cycleParts.push(" ");
+    }
+
+    if (core.rfBubble.fetched != 0 && core.rfBubble.instruction) {
+        if (core.rfBubble.valid)
+            cycleParts.push("RF");
+        else
+            cycleParts.push(" ");
+    }
+
+    if (core.eBubble.fetched != 0 && core.eBubble.instruction) {
+        if (core.eBubble.valid)
+            cycleParts.push("EX");
+        else
+            cycleParts.push(" ");
+    }
+
+    if (core.df1Bubble.fetched != 0 && core.df1Bubble.instruction) {
+        if (core.df1Bubble.valid)
+            cycleParts.push("DF");
+        else
+            cycleParts.push(" ");
+    }
+
+    if (core.df2Bubble.fetched != 0 && core.df2Bubble.instruction) {
+        if (core.df2Bubble.valid)
+            cycleParts.push("DS");
+        else
+            cycleParts.push(" ");
+    }
+
+    if (core.tcBubble.fetched != 0 && core.tcBubble.instruction) {
+        if (core.tcBubble.valid)
+            cycleParts.push("TC");
+        else
+            cycleParts.push(" ");
+    }
+
+    if (!core.writeBackNull) {
+        if (core.writeBackValid)
+            cycleParts.push("WB");
+        else
+            cycleParts.push(" ");
+    }
         
     core.addCycle(instName, cycleParts);
 }
@@ -102,7 +133,7 @@ function simulateStep(core: MIPSCore): string
         return cycle;
     }
 
-    core.instructionCallback("End of Cycle " + core.cycleCounter);
+    core.instructionCallback("Cycle " + core.cycleCounter + ": Fetched " + core.ifBubble.text + ".");
 
     passPipeline(core);
 
