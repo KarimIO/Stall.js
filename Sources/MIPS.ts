@@ -1596,6 +1596,7 @@ class MIPSCore //: Core
                 }
                 this.stackPointer -= 1;
             }
+            alert(this.pcNext);
             this.pcNext = args[0];
         }
         
@@ -1918,7 +1919,6 @@ class MIPSCore //: Core
             this.ifBubble.valid = false;
         }
         else {
-            this.pcNext = this.pc += 4;
             this.pc = this.pcNext;
         }
 
