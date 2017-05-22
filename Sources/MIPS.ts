@@ -1914,7 +1914,7 @@ class MIPSCore //: Core
 
         this.stallUnit();
         if (this.stall) {
-            alert("STALIN");
+            this.ifBubble.instruction = null;
             this.ifBubble.valid = false;
         }
         else {

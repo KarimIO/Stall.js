@@ -58,91 +58,62 @@ function loadMemStep(core: MIPSCore, data: number[]): string
 }
 
 function passPipeline(core: MIPSCore): void {
+    
     var cycleParts:string[] = [];
     var instName = "";
     
-    if (core.ifBubble.instruction) {
-        if (core.ifBubble.valid) {
+    if (core.ifBubble && core.ifBubble.valid) {
+        cycleParts.push("IF");
+        if (core.ifBubble.instruction)
             instName = core.ifBubble.instruction.mnemonic;
-            cycleParts.push("IF");
-        }
     }
-    if (core.isBubble.instruction)
-    {
-        if (core.isBubble.instruction.valid)
-        {
+    if (core.isBubble.fetched != 0 && core.isBubble.instruction) {
+        if (core.isBubble.valid)
             cycleParts.push("IS");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
-    if (core.rfBubble.instruction)
-    {
-        if (core.rfBubble.instruction.valid)
-        {
+
+    if (core.rfBubble.fetched != 0 && core.rfBubble.instruction) {
+        if (core.rfBubble.valid)
             cycleParts.push("RF");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
-    if (core.eBubble.instruction)
-    {
-        if (core.eBubble.instruction.valid)
-        {
+
+    if (core.eBubble.fetched != 0 && core.eBubble.instruction) {
+        if (core.eBubble.valid)
             cycleParts.push("EX");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
-    if (core.df1Bubble.instruction)
-    {
-        if (core.df1Bubble.instruction.valid)
-        {
+
+    if (core.df1Bubble.fetched != 0 && core.df1Bubble.instruction) {
+        if (core.df1Bubble.valid)
             cycleParts.push("DF");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
-    if (core.df2Bubble.instruction)
-    {
-        if (core.df2Bubble.instruction.valid)
-        {
+
+    if (core.df2Bubble.fetched != 0 && core.df2Bubble.instruction) {
+        if (core.df2Bubble.valid)
             cycleParts.push("DS");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
-    if (core.tcBubble.instruction)
-    {
-        if (core.tcBubble.instruction.valid)
-        {
+
+    if (core.tcBubble.fetched != 0 && core.tcBubble.instruction) {
+        if (core.tcBubble.valid)
             cycleParts.push("TC");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
-    if (!core.writeBackNull)
-    {
+
+    if (!core.writeBackNull) {
         if (core.writeBackValid)
-        {
             cycleParts.push("WB");
-        }
         else
-        {
-            cycleParts.push("S");
-        }
+            cycleParts.push(" ");
     }
         
     core.addCycle(instName, cycleParts);
