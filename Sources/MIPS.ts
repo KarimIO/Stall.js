@@ -1706,6 +1706,7 @@ class MIPSCore //: Core
         readData: null
     };
 
+    writeBackNull: boolean;
     writeBackValid: boolean;    
 
     passIFIS(): void {
@@ -1800,7 +1801,7 @@ class MIPSCore //: Core
         this.ifBubble.pc = this.pc;
     }
 
-    stall:boolean = false;
+    stall: boolean = false;
     
     forwardUnit() {
         var rt = this.rfBubble.fetched >> 16 & 31;
@@ -1860,12 +1861,39 @@ class MIPSCore //: Core
     {
         var fetchOut = this.fetchAndDecode();
 
+        // Jump Behavior
+        if (this.isBubble.valid && this.isBubble.instruction.format.name == "J")
+        {
+            this.pc = this.isBubble.arguments[0];
+            if (this.isBubble.instruction.mnemonic == "JUMP_PROCEDURE")
+            {
+                if (this.stackPointer >= 3)
+                {
+                    return "Jump procedure stack overflow."
+                }
+                this.stackPointer += 1;
+                this.stack[this.stackPointer] = this.isBubble.pc;
+            }
+            else if (this.isBubble.instruction.mnemonic == "RETURN_PROCEDURE")
+            {
+                if (this.stackPointer < 0)
+                {
+                    return "Return procedure stack underflow."
+                }
+                this.pc = this.stack[this.stackPointer];
+                this.stackPointer -= 1;
+            }
+            this.ifBubble.valid = false;
+        }
+
         // Do writeback early because it uses tcBubble.
         if (this.tcBubble.valid && this.tcBubble.instruction)
             this.tcBubble.instruction.writeBack(this);
 
         // Pass Data
-        this.writeBackValid = this.tcBubble.valid;
+        this.writeBackValid = this.tcBubble.valid;    
+        this.writeBackNull  = (this.tcBubble.instruction == null);
+
         this.passDSTC();
         this.passDFDS();
         if (this.df2Bubble.valid && this.df2Bubble.instruction)
