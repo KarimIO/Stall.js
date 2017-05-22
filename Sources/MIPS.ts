@@ -666,7 +666,7 @@ function Oak_gen_MIPS(): InstructionSet
     ));
 
     instructions.push(new Instruction(
-        "JUMP_PROCEDURE",
+        "JUMPPROCEDURE",
         jType,
         ["opcode"],
         [0x63],
@@ -682,7 +682,7 @@ function Oak_gen_MIPS(): InstructionSet
     ));
 
     instructions.push(new Instruction(
-        "RETURN_PROCEDURE",
+        "RETURNPROCEDURE",
         jType,
         ["opcode"],
         [0x64],
@@ -1423,7 +1423,6 @@ class MIPSCore //: Core
     //Transient
     cycleCounter: number;
     pc: number;
-    pcNext: number;
     memory: number[];
     predictor: BranchPredictor;
     registerFile: MIPSRegisterFile;
@@ -1501,7 +1500,6 @@ class MIPSCore //: Core
             return result;
 
         }
-        this.pcNext = this.pc + 4;
 
         var fetched = catBytes(arr);
 
@@ -1549,7 +1547,7 @@ class MIPSCore //: Core
                 
                 if(paramTypes[index] === Parameter.special)
                 {
-                    value = decoded.format.decodeSpecialParameter(value, this.pcNext); //Unmangle...
+                    value = decoded.format.decodeSpecialParameter(value, this.pc + 4); //Unmangle...
                 }
 
                 args[bitRanges[i].parameter] = args[bitRanges[i].parameter] | value;
@@ -1575,32 +1573,6 @@ class MIPSCore //: Core
                 args[i] = signExt(args[i], bits);
             }
         }
-
-        //Jumping in Fetch is probably the easiest way to handle it
-        if (decoded.format.name == "J")
-        {
-            if (decoded.mnemonic == "JUMP_PROCEDURE")
-            {
-                if (this.stackPointer >= 3)
-                {
-                    return "Jump procedure stack overflow."
-                }
-                this.stackPointer += 1;
-                this.stack[this.stackPointer] = this.pcNext;
-            }
-            if (decoded.mnemonic == "RETURN_PROCEDURE")
-            {
-                if (this.stackPointer < 0)
-                {
-                    return "Return procedure stack underflow."
-                }
-                this.stackPointer -= 1;
-            }
-            alert(this.pcNext);
-            this.pcNext = args[0];
-        }
-        
-        //Branching here
 
         result =
         {
@@ -1919,7 +1891,7 @@ class MIPSCore //: Core
             this.ifBubble.valid = false;
         }
         else {
-            this.pc = this.pcNext;
+            this.pc += 4;
         }
 
         var bubbles = [this.ifBubble, this.isBubble, this.rfBubble, this.eBubble, this.df1Bubble, this.df2Bubble, this.tcBubble];
